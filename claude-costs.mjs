@@ -237,6 +237,7 @@ async function outputJson(data, args) {
     period: { from: args.from || data.meta.minDate, to: args.to || data.meta.maxDate, days },
     meta: data.meta,
     tokensByModel: data.byModel,
+    tokensByDate: data.byDate,
     totals: data.totals,
     costsByModel: costs,
     grandTotal,
