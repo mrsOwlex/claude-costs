@@ -13,6 +13,16 @@ import {
 import { fetchOpenRouterModels } from './lib/openrouter.mjs';
 import { setColor, bold, dim, green, red, yellow, formatTokens, formatUSD, formatPerMTok, heading, table } from './lib/format.mjs';
 
+const WARNING_DESCRIPTIONS = {
+  'unknown-model-pricing': 'one or more observed local models have no known Claude API price and are excluded from the Claude total',
+  'cache-write-ttl-unknown': 'cache write tokens did not include a 5m/1h TTL split and were priced as 5m cache writes',
+  'long-context-pricing': 'at least one request exceeded the long-context threshold and used long-context rates',
+  'context-limit-exceeded': 'observed request input plus output exceeds the comparison model context window',
+  'output-limit-exceeded': 'observed request output exceeds the comparison model max output limit',
+  'partial-cache-pricing': 'provider exposes cache-read pricing but no cache-write price; cache writes are billed as regular input',
+  'cache-disabled-scenario': 'no-cache scenario ignores provider cache prices and bills all cache tokens as regular input',
+};
+
 async function main() {
   let args;
   try {
@@ -141,6 +151,7 @@ function printClaudeCosts(data, traceCost, months) {
 
   if (traceCost.warnings.length > 0) {
     console.log(yellow(`Warnings: ${traceCost.warnings.join(', ')}`));
+    printWarningDetails(traceCost.warnings);
     if (Object.keys(traceCost.unknownModels).length > 0) {
       const unknown = Object.entries(traceCost.unknownModels)
         .map(([model, count]) => `${model} (${count})`)
@@ -212,6 +223,7 @@ async function printComparison(data, args, months, requestStats) {
   if (partialCacheCount > 0) {
     console.log(yellow(`${partialCacheCount} comparison models expose cache reads but not cache writes; cache writes were priced as regular input.`));
   }
+  printComparisonWarningLegend(comparisons);
   console.log(dim('\nSame-trace means the observed deduped Claude Code request trace priced against that model.'));
   console.log(dim('No-cache bills all cache read/write tokens as normal input. This is a stress case for providers or agents that cannot reproduce Claude Code cache behavior.'));
   if (args.comparison !== 'trace') {
@@ -252,6 +264,7 @@ async function outputJson(data, args) {
     costsByModel: traceCost.costsByModel,
     grandTotal: traceCost.grandTotal,
     monthlyAverage: traceCost.grandTotal / months,
+    warningDescriptions: WARNING_DESCRIPTIONS,
     budget: args.budget,
     comparison: {
       mode: args.comparison,
@@ -294,6 +307,7 @@ async function outputJson(data, args) {
         budgetStatus: budgetStatusText(m, args),
       })),
       skippedImpossible: [],
+      warningDescriptions: WARNING_DESCRIPTIONS,
       assumptions: [
         'sameTrace uses provider cache pricing when available',
         'noCache bills all cache read/write tokens as regular input',
@@ -398,6 +412,25 @@ function warningLabel(model) {
   if (model.outputWarningCount > 0) warnings.push(`out:${model.outputWarningCount}`);
   if (model.warnings.includes('partial-cache-pricing')) warnings.push('partial-cache');
   return warnings.length ? yellow(warnings.join(',')) : dim('—');
+}
+
+function printWarningDetails(warnings) {
+  const uniqueWarnings = [...new Set(warnings)];
+  for (const warning of uniqueWarnings) {
+    console.log(dim(`  ${warning}: ${WARNING_DESCRIPTIONS[warning] || 'no description available'}`));
+  }
+}
+
+function printComparisonWarningLegend(comparisons) {
+  const hasContext = comparisons.some(m => m.contextWarningCount > 0);
+  const hasOutput = comparisons.some(m => m.outputWarningCount > 0);
+  const hasPartialCache = comparisons.some(m => m.warnings.includes('partial-cache-pricing'));
+  if (!hasContext && !hasOutput && !hasPartialCache) return;
+
+  console.log(dim('\nWarn legend:'));
+  if (hasContext) console.log(dim(`  ctx:N = ${WARNING_DESCRIPTIONS['context-limit-exceeded']}; N is the affected request count`));
+  if (hasOutput) console.log(dim(`  out:N = ${WARNING_DESCRIPTIONS['output-limit-exceeded']}; N is the affected request count`));
+  if (hasPartialCache) console.log(dim(`  partial-cache = ${WARNING_DESCRIPTIONS['partial-cache-pricing']}`));
 }
 
 function isAnchorModel(model) {
