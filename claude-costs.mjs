@@ -43,13 +43,8 @@ async function main() {
   }
 
   // --- Section 1: Overview ---
-  const periodLabel = args.from
-    ? `${args.from} – ${args.to}`
-    : `${data.meta.minDate} – ${data.meta.maxDate} (all time)`;
-
-  const days = args.from
-    ? daysBetween(args.from, args.to)
-    : daysBetween(data.meta.minDate, data.meta.maxDate);
+  const periodLabel = `${args.from} – ${args.to}`;
+  const days = daysBetween(args.from, args.to);
 
   console.log(heading('Claude Code Token Usage & Cost Analysis'));
   console.log(`Period:   ${periodLabel} (${days} days)`);
@@ -198,9 +193,7 @@ async function main() {
 }
 
 async function outputJson(data, args) {
-  const days = args.from
-    ? daysBetween(args.from, args.to)
-    : daysBetween(data.meta.minDate, data.meta.maxDate);
+  const days = daysBetween(args.from, args.to);
   const months = Math.max(1, days / 30);
 
   const costs = {};
@@ -234,7 +227,7 @@ async function outputJson(data, args) {
     .sort((a, b) => a.monthlyCost - b.monthlyCost);
 
   console.log(JSON.stringify({
-    period: { from: args.from || data.meta.minDate, to: args.to || data.meta.maxDate, days },
+    period: { from: args.from, to: args.to, days },
     meta: data.meta,
     tokensByModel: data.byModel,
     tokensByDate: data.byDate,
