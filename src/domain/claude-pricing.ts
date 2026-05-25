@@ -128,6 +128,7 @@ export function calculateClaudeCost(
   const normalized: TokenBucket = {
     input: tokens.input || 0,
     output: tokens.output || 0,
+    reasoning: tokens.reasoning || 0,
     cacheRead: tokens.cacheRead || 0,
     cacheCreate5m: tokens.cacheCreate5m || 0,
     cacheCreate1h: tokens.cacheCreate1h || 0,

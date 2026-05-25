@@ -1,6 +1,7 @@
 export interface TokenBucket {
   input: number;
   output: number;
+  reasoning: number;
   cacheRead: number;
   cacheCreate5m: number;
   cacheCreate1h: number;
@@ -13,6 +14,7 @@ export function createTokenBucket(): TokenBucket {
   return {
     input: 0,
     output: 0,
+    reasoning: 0,
     cacheRead: 0,
     cacheCreate5m: 0,
     cacheCreate1h: 0,
@@ -25,6 +27,7 @@ export function createTokenBucket(): TokenBucket {
 export function addTokens(target: TokenBucket, tokens: TokenBucket): void {
   target.input += tokens.input;
   target.output += tokens.output;
+  target.reasoning += tokens.reasoning;
   target.cacheRead += tokens.cacheRead;
   target.cacheCreate5m += tokens.cacheCreate5m;
   target.cacheCreate1h += tokens.cacheCreate1h;

@@ -9,6 +9,7 @@ export interface Request {
   date: string | null;
   model: string;
   tokens: TokenBucket;
+  source?: 'claude' | 'opencode';
 }
 
 export function safeNonNegInt(v: unknown): number {
@@ -37,6 +38,7 @@ export function parseUsageTokens(usage: RawUsage): TokenBucket {
   return {
     input: safeNonNegInt(usage.input_tokens),
     output: safeNonNegInt(usage.output_tokens),
+    reasoning: 0,
     cacheRead: safeNonNegInt(usage.cache_read_input_tokens),
     cacheCreate5m,
     cacheCreate1h,
@@ -66,5 +68,6 @@ export function makeRequest({ key, messageId, requestId, timestamp, model, usage
     date,
     model: normalizeModel(model),
     tokens: parseUsageTokens(usage),
+    source: 'claude',
   };
 }

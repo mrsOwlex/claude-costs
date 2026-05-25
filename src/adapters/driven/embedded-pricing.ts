@@ -1,4 +1,5 @@
 import type { ClaudePricingRates, ComparisonModel } from '../../contracts/pricing-model.js';
+import type { OpencodePricingRates } from '../../domain/opencode-pricing.js';
 import { claudeRates, perM } from '../../domain/claude-pricing.js';
 
 export const CLAUDE_PRICING: Record<string, ClaudePricingRates> = {
@@ -37,6 +38,18 @@ const COMPARISON_MODELS: ComparisonModel[] = [
   { id: 'anthropic/claude-sonnet-4.6', name: 'Claude Sonnet 4.6 (API)', input: perM(3.00), output: perM(15.00), cacheRead: perM(0.30), cacheCreate: perM(3.75) },
   { id: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (API)', input: perM(1.00), output: perM(5.00), cacheRead: perM(0.10), cacheCreate: perM(1.25) },
 ];
+
+export const OPENCODE_PRICING: Record<string, OpencodePricingRates> = {
+  'openai/gpt-5.5': { input: perM(5.00), output: perM(30.00) },
+  'openai/gpt-5.5-fast': { input: perM(5.00), output: perM(30.00) },
+  'openai/gpt-5.5-pro': { input: perM(30.00), output: perM(180.00) },
+  'openai/gpt-5.4': { input: perM(2.50), output: perM(15.00), cacheRead: perM(0.25), cacheWrite: perM(3.125) },
+  'openai/gpt-5.4-mini': { input: perM(0.75), output: perM(4.50), cacheRead: perM(0.075), cacheWrite: perM(0.9375) },
+  'zai-coding-plan/glm-5.1': { input: perM(0.50), output: perM(2.00) },
+  'zai/glm-5.1': { input: perM(0.50), output: perM(2.00) },
+  'gpt-5.5': { input: perM(5.00), output: perM(30.00) },
+  'glm-4.7': { input: perM(0.50), output: perM(2.00) },
+};
 
 export function getComparisonModels(): ComparisonModel[] {
   return COMPARISON_MODELS.map(m => ({ ...m }));

@@ -7,6 +7,7 @@ test('createTokenBucket returns all-zero bucket', () => {
   assert.deepEqual(bucket, {
     input: 0,
     output: 0,
+    reasoning: 0,
     cacheRead: 0,
     cacheCreate5m: 0,
     cacheCreate1h: 0,
@@ -21,6 +22,7 @@ test('addTokens accumulates correctly', () => {
   addTokens(target, {
     input: 10,
     output: 5,
+    reasoning: 0,
     cacheRead: 3,
     cacheCreate5m: 2,
     cacheCreate1h: 4,
@@ -40,7 +42,7 @@ test('addTokens accumulates correctly', () => {
 
 test('addTokens accumulates across multiple calls', () => {
   const target = createTokenBucket();
-  const tokens = { input: 5, output: 3, cacheRead: 1, cacheCreate5m: 0, cacheCreate1h: 0, cacheCreateUnknown: 0, cacheCreate: 0, cacheCreateTotal: 0 };
+  const tokens = { input: 5, output: 3, reasoning: 0, cacheRead: 1, cacheCreate5m: 0, cacheCreate1h: 0, cacheCreateUnknown: 0, cacheCreate: 0, cacheCreateTotal: 0 };
   addTokens(target, tokens);
   addTokens(target, tokens);
   assert.equal(target.input, 10);

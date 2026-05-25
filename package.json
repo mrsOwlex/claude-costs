@@ -1,10 +1,10 @@
 {
-  "name": "claude-costs",
-  "version": "1.0.0",
-  "description": "CLI for analyzing Claude Code usage logs and estimating API-equivalent costs",
+  "name": "agent-costs",
+  "version": "2.0.0",
+  "description": "CLI for analyzing AI coding agent usage logs and estimating API-equivalent costs",
   "type": "module",
   "bin": {
-    "claude-costs": "./bin/claude-costs.js"
+    "agent-costs": "./bin/agent-costs.js"
   },
   "scripts": {
     "build": "tsc",
@@ -16,9 +16,13 @@
     "node": ">=20.0.0"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20.0.0",
     "tsx": "^4.0.0",
     "typescript": "^5.5.0"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "^12.10.0"
+  }
 }

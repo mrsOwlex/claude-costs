@@ -8,6 +8,7 @@ function makeTokens(input: number, output = 0, cacheRead = 0, cacheCreateTotal =
   return {
     input,
     output,
+    reasoning: 0,
     cacheRead,
     cacheCreate5m: 0,
     cacheCreate1h: 0,

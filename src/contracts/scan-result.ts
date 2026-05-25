@@ -23,4 +23,5 @@ export interface ScanMeta {
   maxDate: string | null;
   projectDirs: string[];
   messageCount: number;
+  source?: 'claude' | 'opencode' | 'all';
 }

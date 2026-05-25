@@ -4,7 +4,7 @@ This file provides guidance for coding agents working in this repository.
 
 ## Project Overview
 
-`claude-costs` is a Node.js CLI that analyzes local Claude Code JSONL session files. It deduplicates usage entries, aggregates tokens, estimates Anthropic API-equivalent cost, and compares the observed trace against other models.
+`agent-costs` is a Node.js CLI that analyzes local AI coding agent usage data. It supports Claude Code (JSONL session files) and opencode (SQLite database), deduplicates usage entries, aggregates tokens, estimates API-equivalent costs, and compares the observed trace against other models.
 
 The codebase is written in TypeScript, uses a hexagonal architecture (ports & adapters), and compiles to `dist/` via `tsc`. Start in `src/contracts/` to understand all data shapes and port interfaces.
 
@@ -27,7 +27,7 @@ contracts/  ←  domain/  ←  application/  ←  adapters/driving/
 
 | Path | Purpose |
 | --- | --- |
-| `bin/claude-costs.js` | Shebang wrapper that imports `dist/cli.js`. |
+| `bin/agent-costs.js` | Shebang wrapper that imports `dist/cli.js`. |
 | `src/cli.ts` | Thin CLI entrypoint: wires adapters → use case. |
 | **src/contracts/** | All type definitions, factory functions, and port interfaces. |
 | `src/contracts/tokens.ts` | TokenBucket interface, `createTokenBucket()`, `addTokens()`. |
@@ -43,6 +43,7 @@ contracts/  ←  domain/  ←  application/  ←  adapters/driving/
 | **src/domain/** | Pure business logic (no I/O, no side effects). |
 | `src/domain/scanner.ts` | Dedup logic, aggregation: `chooseRequestEntry()`, `deduplicateAndAggregate()`. |
 | `src/domain/claude-pricing.ts` | Claude API cost calculation per request and trace. |
+| `src/domain/opencode-pricing.ts` | opencode model cost calculation per request and trace. |
 | `src/domain/comparison-pricing.ts` | Comparison model pricing, cache modes, agentic range. |
 | `src/domain/model-normalization.ts` | Re-export from contracts (for backwards-compatible imports). |
 | `src/domain/stats.ts` | `daysBetween()`, `percentile()`, `calculateRequestStats()`. |
@@ -51,7 +52,8 @@ contracts/  ←  domain/  ←  application/  ←  adapters/driving/
 | `src/application/build-comparisons.ts` | `buildComparisons()` orchestration. |
 | **src/adapters/** | Infrastructure adapters (I/O, external APIs, rendering). |
 | `src/adapters/driving/cli.ts` | CLI argument parsing: `parseArgs()`, `HELP`, `CLIArgs` interface. |
-| `src/adapters/driven/filesystem-session-source.ts` | Session scanning via node:fs: `scanSessions()`. |
+| `src/adapters/driven/filesystem-session-source.ts` | Claude session scanning via node:fs: `scanSessions()`. |
+| `src/adapters/driven/opencode-session-source.ts` | opencode session scanning via better-sqlite3: `scanOpencodeSessions()`. |
 | `src/adapters/driven/embedded-pricing.ts` | `CLAUDE_PRICING`, `COMPARISON_MODELS` constants. |
 | `src/adapters/driven/openrouter-pricing-source.ts` | OpenRouter API fetch and model merging. |
 | `src/adapters/driven/terminal-renderer.ts` | Text table output: `printTokenUsage()`, `printClaudeCosts()`, etc. |
@@ -109,13 +111,13 @@ node --import tsx --test test/contracts/
 Run the CLI manually:
 
 ```sh
-node bin/claude-costs.js --help
+node bin/agent-costs.js --help
 ```
 
 Run JSON output for inspection:
 
 ```sh
-node bin/claude-costs.js --json
+node bin/agent-costs.js --json
 ```
 
 ## Coding Guidelines

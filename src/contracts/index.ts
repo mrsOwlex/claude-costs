@@ -1,7 +1,7 @@
 export { createTokenBucket, addTokens } from './tokens.js';
 export { safeNonNegInt, parseUsageTokens, makeRequest } from './request.js';
 export { emptyCost, addCost, addWarning } from './cost.js';
-export { normalizeModel, MODEL_ALIASES } from './model-normalization.js';
+export { normalizeModel, normalizeOpencodeModel, MODEL_ALIASES, OPENCODE_MODEL_ALIASES } from './model-normalization.js';
 
 export type { TokenBucket } from './tokens.js';
 export type { CostBreakdown, TraceCostResult } from './cost.js';

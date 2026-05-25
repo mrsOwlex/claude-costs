@@ -158,6 +158,7 @@ export function calculateComparisonCost(
     tokens: {
       input: inputTokens,
       output: outputTokens,
+      reasoning: 0,
       cacheRead: cacheReadTokens,
       cacheCreate5m: 0,
       cacheCreate1h: 0,

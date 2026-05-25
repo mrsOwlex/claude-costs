@@ -5,7 +5,7 @@ import { createTokenBucket, addTokens } from '../contracts/tokens.js';
 
 export function totalRequestTokens(request: Request): number {
   const t = request.tokens;
-  return t.input + t.output + t.cacheRead + t.cacheCreateTotal;
+  return t.input + t.output + t.reasoning + t.cacheRead + t.cacheCreateTotal;
 }
 
 export function tokensEqual(a: TokenBucket, b: TokenBucket): boolean {
@@ -15,7 +15,8 @@ export function tokensEqual(a: TokenBucket, b: TokenBucket): boolean {
     && a.cacheCreate5m === b.cacheCreate5m
     && a.cacheCreate1h === b.cacheCreate1h
     && a.cacheCreateUnknown === b.cacheCreateUnknown
-    && a.cacheCreateTotal === b.cacheCreateTotal;
+    && a.cacheCreateTotal === b.cacheCreateTotal
+    && a.reasoning === b.reasoning;
 }
 
 export function chooseRequestEntry(current: Request | undefined, next: Request): Request {
@@ -111,6 +112,64 @@ export function deduplicateAndAggregate(
       maxDate,
       projectDirs: [],
       messageCount: messageIds.size,
+    },
+  };
+}
+
+export function mergeScanResults(a: ScanResult, b: ScanResult): ScanResult {
+  const requests = [...a.requests, ...b.requests]
+    .sort((x, y) => String(x.timestamp || '').localeCompare(String(y.timestamp || '')));
+
+  const byModel: Record<string, TokenBucket> = {};
+  for (const source of [a.byModel, b.byModel]) {
+    for (const [model, tokens] of Object.entries(source)) {
+      if (!byModel[model]) byModel[model] = createTokenBucket();
+      addTokens(byModel[model]!, tokens);
+    }
+  }
+
+  const byDate: Record<string, Record<string, TokenBucket>> = {};
+  for (const source of [a.byDate, b.byDate]) {
+    for (const [date, models] of Object.entries(source)) {
+      if (!byDate[date]) byDate[date] = {};
+      for (const [model, tokens] of Object.entries(models)) {
+        if (!byDate[date]![model]) byDate[date]![model] = createTokenBucket();
+        addTokens(byDate[date]![model]!, tokens);
+      }
+    }
+  }
+
+  const totals = createTokenBucket();
+  addTokens(totals, a.totals);
+  addTokens(totals, b.totals);
+
+  const minDate = a.meta.minDate && b.meta.minDate
+    ? (a.meta.minDate < b.meta.minDate ? a.meta.minDate : b.meta.minDate)
+    : a.meta.minDate || b.meta.minDate;
+  const maxDate = a.meta.maxDate && b.meta.maxDate
+    ? (a.meta.maxDate > b.meta.maxDate ? a.meta.maxDate : b.meta.maxDate)
+    : a.meta.maxDate || b.meta.maxDate;
+
+  return {
+    requests,
+    byModel,
+    byDate,
+    totals,
+    meta: {
+      totalFiles: a.meta.totalFiles + b.meta.totalFiles,
+      totalBytes: a.meta.totalBytes + b.meta.totalBytes,
+      totalEntries: requests.length,
+      totalRawEntries: a.meta.totalRawEntries + b.meta.totalRawEntries,
+      totalFileEntries: a.meta.totalFileEntries + b.meta.totalFileEntries,
+      duplicateRequests: a.meta.duplicateRequests + b.meta.duplicateRequests,
+      conflictRequests: a.meta.conflictRequests + b.meta.conflictRequests,
+      invalidEntries: a.meta.invalidEntries + b.meta.invalidEntries,
+      undatedSkipped: a.meta.undatedSkipped + b.meta.undatedSkipped,
+      minDate,
+      maxDate,
+      projectDirs: [...a.meta.projectDirs, ...b.meta.projectDirs],
+      messageCount: a.meta.messageCount + b.meta.messageCount,
+      source: 'all',
     },
   };
 }

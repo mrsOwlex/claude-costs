@@ -21,7 +21,7 @@ function sortedModelEntries(byModel: Record<string, TokenBucket>): [string, Toke
 }
 
 function totalBucketTokens(t: TokenBucket): number {
-  return t.input + t.output + t.cacheRead + (t.cacheCreateTotal ?? t.cacheCreate ?? 0);
+  return t.input + t.output + t.reasoning + t.cacheRead + (t.cacheCreateTotal ?? t.cacheCreate ?? 0);
 }
 
 function cacheStatus(model: ComparisonRow): string {
@@ -104,38 +104,50 @@ export function selectComparisonRows(comparisons: ComparisonRow[], args: CLIArgs
 export function printTokenUsage(data: ScanResult): void {
   console.log(heading('Token Usage by Model'));
 
+  const hasReasoning = data.totals.reasoning > 0;
   const modelEntries = sortedModelEntries(data.byModel);
-  const tokenRows: (string[] | 'separator')[] = modelEntries.map(([model, t]) => [
-    model,
-    formatTokens(t.input),
-    formatTokens(t.output),
-    formatTokens(t.cacheRead),
-    formatTokens(t.cacheCreate5m),
-    formatTokens(t.cacheCreate1h),
-    formatTokens(t.cacheCreateUnknown),
-    formatTokens(totalBucketTokens(t)),
-  ]);
+  const tokenRows: (string[] | 'separator')[] = modelEntries.map(([model, t]) => {
+    const row = [
+      model,
+      formatTokens(t.input),
+      formatTokens(t.output),
+    ];
+    if (hasReasoning) row.push(formatTokens(t.reasoning));
+    row.push(
+      formatTokens(t.cacheRead),
+      formatTokens(t.cacheCreate5m),
+      formatTokens(t.cacheCreate1h),
+      formatTokens(t.cacheCreateUnknown),
+      formatTokens(totalBucketTokens(t)),
+    );
+    return row;
+  });
 
   tokenRows.push('separator');
-  tokenRows.push([
+  const totalRow = [
     bold('TOTAL'),
     formatTokens(data.totals.input),
     formatTokens(data.totals.output),
+  ];
+  if (hasReasoning) totalRow.push(formatTokens(data.totals.reasoning));
+  totalRow.push(
     formatTokens(data.totals.cacheRead),
     formatTokens(data.totals.cacheCreate5m),
     formatTokens(data.totals.cacheCreate1h),
     formatTokens(data.totals.cacheCreateUnknown),
     formatTokens(totalBucketTokens(data.totals)),
-  ]);
+  );
+  tokenRows.push(totalRow);
 
-  console.log(table(
-    ['Model', 'Input', 'Output', 'Cache Read', 'Cache Wr 5m', 'Cache Wr 1h', 'Cache Wr ?', 'Total'],
-    tokenRows,
-  ));
+  const headers = ['Model', 'Input', 'Output'];
+  if (hasReasoning) headers.push('Reasoning');
+  headers.push('Cache Read', 'Cache Wr 5m', 'Cache Wr 1h', 'Cache Wr ?', 'Total');
+
+  console.log(table(headers, tokenRows));
 }
 
 export function printClaudeCosts(data: ScanResult, traceCost: TraceCostResult, months: number): void {
-  console.log(heading('Estimated Cost (Anthropic API Pricing)'));
+  console.log(heading('Estimated Cost (API Pricing)'));
 
   const costRows: (string[] | 'separator')[] = [];
   for (const [model] of sortedModelEntries(data.byModel)) {
@@ -254,7 +266,7 @@ export function printComparison(
 export function printSummary(traceCost: TraceCostResult, args: CLIArgs, months: number): void {
   console.log('');
   console.log(bold('Summary'));
-  console.log(`  Observed Claude API-equivalent trace cost: ${bold(formatUSD(traceCost.grandTotal / months))}/month.`);
+  console.log(`  Observed API-equivalent trace cost: ${bold(formatUSD(traceCost.grandTotal / months))}/month.`);
   console.log(`  OpenRouter same-trace comparison assumes identical request count and token trace.`);
   if (args.comparison !== 'trace') {
     console.log(`  Agentic-adjusted ranges use ${args.agenticMultiplier.min}x–${args.agenticMultiplier.max}x as an explicit scenario multiplier.`);

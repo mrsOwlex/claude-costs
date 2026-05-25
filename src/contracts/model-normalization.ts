@@ -19,4 +19,11 @@ export function normalizeModel(raw: unknown): string {
   return withoutDate || m;
 }
 
-export { MODEL_ALIASES };
+const OPENCODE_MODEL_ALIASES: Record<string, string> = {};
+
+export function normalizeOpencodeModel(modelId: string, providerId: string): string {
+  const aliased = OPENCODE_MODEL_ALIASES[modelId] ?? modelId;
+  return `${providerId}/${aliased}`;
+}
+
+export { MODEL_ALIASES, OPENCODE_MODEL_ALIASES };

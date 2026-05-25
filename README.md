@@ -1,51 +1,51 @@
-# claude-costs
+# agent-costs
 
-`claude-costs` is a small Node.js CLI for analyzing local Claude Code usage logs. It scans Claude session JSONL files, deduplicates streamed request entries, aggregates token usage, estimates Anthropic API-equivalent cost, and compares the same trace against other models.
+`agent-costs` is a Node.js CLI for analyzing local AI coding agent usage data. It supports **Claude Code** (JSONL session files) and **opencode** (SQLite database), deduplicates streamed request entries, aggregates token usage, estimates API-equivalent costs, and compares the same trace against other models.
 
-The tool is intentionally local-first. It reads Claude Code session files from your machine and only contacts OpenRouter to refresh comparison model prices. If OpenRouter is unavailable, embedded fallback prices are used.
+The tool is intentionally local-first. It reads session data from your machine and only contacts OpenRouter to refresh comparison model prices. If OpenRouter is unavailable, embedded fallback prices are used.
 
 ## Requirements
 
 - Node.js 20+ recommended
-- Local Claude Code session files
-- No package install step is required for the current codebase
+- Local Claude Code session files and/or an opencode SQLite database
+- `npm install` to install dependencies (better-sqlite3 for opencode support)
 
 ## Usage
 
 Run the CLI directly with Node:
 
 ```sh
-node ./claude-costs.mjs
+node bin/agent-costs.js
 ```
 
 Show help:
 
 ```sh
-node ./claude-costs.mjs --help
+node bin/agent-costs.js --help
 ```
 
 Analyze a specific month:
 
 ```sh
-node ./claude-costs.mjs --month 2026-05
+node bin/agent-costs.js --month 2026-05
 ```
 
 Analyze an explicit date range:
 
 ```sh
-node ./claude-costs.mjs --from 2026-05-01 --to 2026-05-24
+node bin/agent-costs.js --from 2026-05-01 --to 2026-05-24
 ```
 
 Compare models against a monthly budget:
 
 ```sh
-node ./claude-costs.mjs --budget 200
+node bin/agent-costs.js --budget 200
 ```
 
 Emit machine-readable JSON:
 
 ```sh
-node ./claude-costs.mjs --json
+node bin/agent-costs.js --json
 ```
 
 ## Options
@@ -58,13 +58,16 @@ node ./claude-costs.mjs --json
 | `--budget N` | Monthly budget used for comparison status. Default: `100`. |
 | `--comparison MODE` | `trace`, `agentic`, or `both`. Default: `both`. |
 | `--agentic-multiplier MIN:MAX` | Multiplier range for the agentic scenario. Default: `1:3`. |
+| `--source SOURCE` | `claude`, `opencode`, or `all`. Default: `all`. |
 | `--json` | Print JSON instead of formatted tables. |
 | `--no-color` | Disable terminal colors. |
 | `--help`, `-h` | Show CLI help. |
 
-If no date range is provided, the tool analyzes the last 30 days. Claude Code may delete older local session files, so available history depends on what still exists locally.
+If no date range is provided, the tool analyzes the last 30 days.
 
 ## Data Sources
+
+### Claude Code
 
 The scanner looks for Claude project session files in these locations:
 
@@ -75,6 +78,17 @@ The scanner looks for Claude project session files in these locations:
 | `~/.claude/projects` | Legacy/default Claude directory. |
 
 Only `.jsonl` files are scanned. The scanner only uses assistant entries that contain a `message.usage` object.
+
+### opencode
+
+The scanner reads from the opencode SQLite database:
+
+| Source | Behavior |
+| --- | --- |
+| `OPENCODE_DATA_DIR` | Optional override for the opencode data directory. |
+| `~/.local/share/opencode/opencode.db` | Default opencode database location. |
+
+The scanner queries the `message` table for assistant messages with token usage data. Each message is mapped to a request with per-message token granularity, including reasoning tokens.
 
 ## Output Overview
 
@@ -319,7 +333,7 @@ agenticMax = sameTraceTotal * maxMultiplier
 The default multiplier is `1:3`, so the displayed range is `1x` to `3x` the same-trace cost. You can change it with:
 
 ```sh
-node ./claude-costs.mjs --agentic-multiplier 1.5:2.5
+node bin/agent-costs.js --agentic-multiplier 1.5:2.5
 ```
 
 Changing the agentic multiplier does not change same-trace cost. It only changes the scenario range and budget status when `--comparison agentic` or `--comparison both` is used.

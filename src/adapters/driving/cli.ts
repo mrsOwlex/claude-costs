@@ -5,15 +5,16 @@ export interface CLIArgs {
   budget: number;
   comparison: 'trace' | 'agentic' | 'both';
   agenticMultiplier: { min: number; max: number };
+  source: 'claude' | 'opencode' | 'all';
   json: boolean;
   noColor: boolean;
   help: boolean;
 }
 
 const HELP = `
-Claude Code Token Usage & Cost Analyzer
+Agent Token Usage & Cost Analyzer
 
-Usage: claude-costs [options]
+Usage: agent-costs [options]
 
 Options:
   --month YYYY-MM       Filter to a specific month
@@ -23,11 +24,12 @@ Options:
   --comparison MODE     trace, agentic, or both (default: both)
   --agentic-multiplier MIN:MAX
                          Agentic scenario range (default: 1:3)
+  --source SOURCE       claude, opencode, or all (default: all)
   --json                Output raw JSON
   --no-color            Disable terminal colors
   --help                Show this help
 
-Default: last 30 days. Claude Code may delete older session files.
+Default: last 30 days.
 `.trim();
 
 export function parseArgs(argv: string[] = process.argv.slice(2)): CLIArgs {
@@ -38,6 +40,7 @@ export function parseArgs(argv: string[] = process.argv.slice(2)): CLIArgs {
     budget: 100,
     comparison: 'both',
     agenticMultiplier: { min: 1, max: 3 },
+    source: 'all',
     json: false,
     noColor: false,
     help: false,
@@ -88,6 +91,12 @@ export function parseArgs(argv: string[] = process.argv.slice(2)): CLIArgs {
       case '--agentic-multiplier':
         if (!next) throw new Error('--agentic-multiplier expects MIN:MAX');
         args.agenticMultiplier = parseAgenticMultiplier(next);
+        i++;
+        break;
+      case '--source':
+        if (!next || !['claude', 'opencode', 'all'].includes(next))
+          throw new Error('--source expects claude, opencode, or all');
+        args.source = next as CLIArgs['source'];
         i++;
         break;
       case '--json':
