@@ -89,3 +89,18 @@ function stripAnsi(s) {
 export function heading(text) {
   return '\n' + bold(text) + '\n' + '═'.repeat(stripAnsi(text).length);
 }
+
+export function formatPercent(n) {
+  return `${(n * 100).toFixed(1)}%`;
+}
+
+export function formatBytes(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(0)} MB`;
+}
+
+export function formatCostRange(range) {
+  if (Math.abs(range.min - range.max) < 0.000001) return formatUSD(range.min);
+  return `${formatUSD(range.min)}-${formatUSD(range.max)}`;
+}

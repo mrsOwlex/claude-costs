@@ -6,19 +6,70 @@ This file provides guidance for coding agents working in this repository.
 
 `claude-costs` is a Node.js CLI that analyzes local Claude Code JSONL session files. It deduplicates usage entries, aggregates tokens, estimates Anthropic API-equivalent cost, and compares the observed trace against other models.
 
-The codebase is intentionally small and dependency-free. Prefer small, direct changes over adding abstractions or packages.
+The codebase is dependency-free and uses a hexagonal architecture (ports & adapters). Start in `contracts/` to understand all data shapes and port interfaces.
+
+## Architecture
+
+The project follows a hexagonal architecture with strict one-way dependencies:
+
+```
+contracts/  ←  domain/  ←  application/  ←  adapters/driving/
+                   ↑                              ↓
+              adapters/driven/  ─────────→  contracts/
+```
+
+- **Contracts** import nothing — they define all shared types, factory functions, and port interfaces
+- **Domain** imports only from contracts — pure business logic with no I/O
+- **Application** imports from domain + contracts — use case orchestration
+- **Adapters** import from contracts + domain — I/O and infrastructure
 
 ## Repository Structure
 
 | Path | Purpose |
 | --- | --- |
-| `claude-costs.mjs` | CLI entrypoint, text output, JSON output, comparison table construction. |
-| `lib/args.mjs` | CLI argument parsing and validation. |
-| `lib/scanner.mjs` | Claude project discovery, JSONL scanning, request dedupe, token aggregation. |
-| `lib/pricing.mjs` | Claude pricing, comparison model pricing, cache scenarios, agentic range. |
-| `lib/openrouter.mjs` | Best-effort OpenRouter model metadata fetch. |
-| `lib/format.mjs` | Terminal formatting, currency/token display, table rendering. |
-| `test/*.mjs` | Node test runner coverage for parsing, scanner behavior, pricing, and comparisons. |
+| `claude-costs.mjs` | Thin CLI entrypoint (~30 lines): wires adapters → use case. |
+| **contracts/** | All type definitions, factory functions, and port interfaces. |
+| `contracts/tokens.mjs` | TokenBucket typedef, `createTokenBucket()`, `addTokens()`. |
+| `contracts/request.mjs` | Request typedef, `makeRequest()`, `parseUsageTokens()`, `safeNonNegInt()`. |
+| `contracts/cost.mjs` | CostBreakdown typedef, `emptyCost()`, `addCost()`, `addWarning()`. |
+| `contracts/pricing-model.mjs` | ClaudePricingRates, ComparisonModel typedefs. |
+| `contracts/scan-result.mjs` | ScanResult, ScanMeta typedefs. |
+| `contracts/ports/session-source.mjs` | SessionDataSource port interface. |
+| `contracts/ports/pricing-source.mjs` | PricingDataSource port interface. |
+| `contracts/ports/output-renderer.mjs` | OutputRenderer port interface. |
+| `contracts/index.mjs` | Re-exports all contract functions. |
+| **domain/** | Pure business logic (no I/O, no side effects). |
+| `domain/scanner.mjs` | Dedup logic, aggregation: `chooseRequestEntry()`, `deduplicateAndAggregate()`. |
+| `domain/claude-pricing.mjs` | Claude API cost calculation per request and trace. |
+| `domain/comparison-pricing.mjs` | Comparison model pricing, cache modes, agentic range. |
+| `domain/model-normalization.mjs` | `normalizeModel()` and `MODEL_ALIASES`. |
+| `domain/stats.mjs` | `daysBetween()`, `percentile()`, `calculateRequestStats()`. |
+| **application/** | Use case orchestration. |
+| `application/analyze-usage.mjs` | Main use case: scan → price → compare → render. |
+| `application/build-comparisons.mjs` | `buildComparisons()` orchestration. |
+| **adapters/** | Infrastructure adapters (I/O, external APIs, rendering). |
+| `adapters/driving/cli.mjs` | CLI argument parsing: `parseArgs()`, `HELP`. |
+| `adapters/driven/filesystem-session-source.mjs` | Session scanning via node:fs: `scanSessions()`. |
+| `adapters/driven/embedded-pricing.mjs` | `CLAUDE_PRICING`, `COMPARISON_MODELS` constants. |
+| `adapters/driven/openrouter-pricing-source.mjs` | OpenRouter API fetch and model merging. |
+| `adapters/driven/terminal-renderer.mjs` | Text table output: `printTokenUsage()`, `printClaudeCosts()`, etc. |
+| `adapters/driven/json-renderer.mjs` | JSON output: `outputJson()`. |
+| `adapters/driven/format.mjs` | Terminal formatting: colors, `formatTokens()`, `formatUSD()`, `table()`. |
+| **test/** | Node test runner coverage. |
+| `test/scanner-pricing.test.mjs` | Integration tests: scanner + pricing + comparisons. |
+| `test/validation.test.mjs` | Input validation and scanner edge cases. |
+| `test/domain/*.test.mjs` | Unit tests for domain layer (scanner, pricing, stats, normalization). |
+| `test/contracts/*.test.mjs` | Unit tests for contract factories and utilities. |
+
+## Extending the Project
+
+To add a new feature, start by reading `contracts/` to understand available data shapes and ports:
+
+1. **New data source**: Implement the `SessionDataSource` port in `contracts/ports/session-source.mjs`
+2. **New pricing provider**: Implement the `PricingDataSource` port in `contracts/ports/pricing-source.mjs`
+3. **New output format**: Implement the `OutputRenderer` port in `contracts/ports/output-renderer.mjs`
+4. **New domain logic**: Add pure functions in `domain/`, importing only from `contracts/`
+5. **New use case**: Add orchestration in `application/`, wiring domain + ports
 
 ## Development Commands
 
@@ -26,6 +77,13 @@ Run the full test suite:
 
 ```sh
 node --test
+```
+
+Run only domain or contract tests:
+
+```sh
+node --test test/domain/
+node --test test/contracts/
 ```
 
 Run the CLI manually:
@@ -51,6 +109,7 @@ node ./claude-costs.mjs --json
 - Treat OpenRouter as optional and best-effort.
 - Keep tests deterministic and independent of real Claude data.
 - Use temporary JSONL fixtures for scanner tests.
+- Respect the one-way dependency graph: contracts → domain → application → adapters.
 
 ## Calculation Invariants
 
@@ -140,7 +199,7 @@ Monthly cost is total cost divided by this month factor. Do not silently change 
 
 ## Testing Expectations
 
-When changing scanner or pricing behavior, add or update tests in `test/*.mjs`.
+When changing scanner or pricing behavior, add or update tests in `test/`.
 
 Important areas to test:
 

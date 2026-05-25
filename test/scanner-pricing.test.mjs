@@ -4,15 +4,18 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
-import { scanSessions } from '../lib/scanner.mjs';
+import { scanSessions } from '../adapters/driven/filesystem-session-source.mjs';
+import { CLAUDE_PRICING } from '../adapters/driven/embedded-pricing.mjs';
 import {
-  calculateAgenticAdjustedRange,
   calculateClaudeRequestCost,
   calculateClaudeTraceCost,
+} from '../domain/claude-pricing.mjs';
+import {
+  calculateAgenticAdjustedRange,
   calculateComparisonNoCacheTraceCost,
   calculateComparisonTraceCost,
-} from '../lib/pricing.mjs';
-import { buildComparisons } from '../claude-costs.mjs';
+} from '../domain/comparison-pricing.mjs';
+import { buildComparisons } from '../application/build-comparisons.mjs';
 
 function usageLine({ id, requestId, timestamp, model = 'claude-opus-4-6', usage }) {
   return JSON.stringify({
@@ -118,7 +121,7 @@ test('Claude request cost uses 1h cache write pricing', () => {
       cacheCreateUnknown: 0,
       cacheCreateTotal: 1_000_000,
     },
-  });
+  }, CLAUDE_PRICING);
 
   assert.equal(cost.total, 10);
   assert.equal(cost.cacheCreate1h, 10);
@@ -134,7 +137,7 @@ test('Sonnet 4.5 long-context premium is applied per request', () => {
       model: 'claude-sonnet-4-5',
       tokens: { input: 201_000, output: 0, cacheRead: 0, cacheCreate5m: 0, cacheCreate1h: 0, cacheCreateUnknown: 0, cacheCreateTotal: 0 },
     },
-  ]);
+  ], CLAUDE_PRICING);
 
   assert.equal(trace.grandTotal, 199_000 * 3 / 1_000_000 + 201_000 * 6 / 1_000_000);
   assert.deepEqual(trace.warnings, ['long-context-pricing']);
@@ -144,7 +147,7 @@ test('Sonnet 4.6 does not receive 200K long-context premium', () => {
   const cost = calculateClaudeRequestCost({
     model: 'claude-sonnet-4-6',
     tokens: { input: 250_000, output: 0, cacheRead: 0, cacheCreate5m: 0, cacheCreate1h: 0, cacheCreateUnknown: 0, cacheCreateTotal: 0 },
-  });
+  }, CLAUDE_PRICING);
 
   assert.equal(cost.total, 0.75);
   assert.equal(cost.longContext, false);

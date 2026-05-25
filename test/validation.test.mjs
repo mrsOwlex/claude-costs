@@ -4,8 +4,8 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
-import { parseArgs } from '../lib/args.mjs';
-import { scanSessions } from '../lib/scanner.mjs';
+import { parseArgs } from '../adapters/driving/cli.mjs';
+import { scanSessions } from '../adapters/driven/filesystem-session-source.mjs';
 
 // --- args validation ---
 
